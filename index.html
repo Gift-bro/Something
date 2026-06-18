@@ -870,16 +870,46 @@ function checkSecret(){
   else { hint.textContent=`🔒 Kunjungi ${TOTAL_ROOMS-visitedRooms.size} ruangan lagi untuk membuka Ruang Rahasia`; hint.style.color=''; }
 }
 function updateMapGrid(){ document.querySelectorAll('.map-cell').forEach(cell=>{ const k=cell.dataset.key; if(visitedRooms.has(k))cell.classList.add('visited-cell'); if(k==='secret'&&visitedRooms.size>=TOTAL_ROOMS){cell.classList.remove('locked-cell');cell.querySelector('.mc-icon').textContent='🔮';} }); }
-let triviaAnswered=[];
+let triviaAnswerState = []; // Menyimpan status jawaban: null (belum), true (benar), false (salah)
+
 function buildTrivia(){
-  triviaAnswered=triviaData.map(()=>false); document.getElementById('trivia-score').textContent=''; const container=document.getElementById('trivia-questions');
-  container.innerHTML=triviaData.map((td,qi)=>`<div class="question-card" data-q="${qi}"><div class="q-head"><span class="q-brain">🧠</span>${esc(td.q)}</div><div class="choices">${td.opts.map((o,bi)=>`<button class="choice-btn" onclick="answerQ(${qi},${bi},${bi===td.ans})">${esc(o)}</button>`).join('')}</div></div>`).join('');
+  // Reset state menjadi null untuk semua pertanyaan
+  triviaAnswerState = triviaData.map(() => null); 
+  document.getElementById('trivia-score').textContent = ''; 
+  const container = document.getElementById('trivia-questions');
+  
+  container.innerHTML = triviaData.map((td,qi) => `
+    <div class="question-card" data-q="${qi}">
+      <div class="q-head"><span class="q-brain">🧠</span>${esc(td.q)}</div>
+      <div class="choices">
+        ${td.opts.map((o,bi) => `<button class="choice-btn" onclick="answerQ(${qi},${bi},${bi===td.ans})">${esc(o)}</button>`).join('')}
+      </div>
+    </div>
+  `).join('');
 }
-function answerQ(qi,bi,isCorrect){
-  const card=document.querySelector(`[data-q="${qi}"]`);
-  card.querySelectorAll('.choice-btn').forEach((b,i)=>{ b.disabled=true; if(i===triviaData[qi].ans)b.classList.add('correct'); else if(i===bi&&!isCorrect)b.classList.add('wrong'); });
-  triviaAnswered[qi]=true;
-  if(triviaAnswered.every(Boolean)){ const correct=document.querySelectorAll('.question-card .choice-btn.correct:not(.wrong)').length; document.getElementById('trivia-score').textContent=`Skormu: ${correct}/${triviaData.length} 🎉`; }
+
+function answerQ(qi, bi, isCorrect){
+  // Jika pertanyaan ini sudah dijawab, hentikan fungsi (mencegah double-click)
+  if(triviaAnswerState[qi] !== null) return; 
+
+  const card = document.querySelector(`[data-q="${qi}"]`);
+  
+  // Tampilkan efek visual (hijau untuk benar, merah untuk yang salah dipilih)
+  card.querySelectorAll('.choice-btn').forEach((b,i) => { 
+    b.disabled = true; 
+    if(i === triviaData[qi].ans) b.classList.add('correct'); 
+    else if(i === bi && !isCorrect) b.classList.add('wrong'); 
+  });
+  
+  // Simpan hasil jawaban user (true jika benar, false jika salah)
+  triviaAnswerState[qi] = isCorrect;
+  
+  // Jika semua pertanyaan sudah dijawab (tidak ada lagi yang bernilai null)
+  if(triviaAnswerState.every(ans => ans !== null)){ 
+    // Hitung berapa banyak jawaban yang bernilai 'true'
+    const correctCount = triviaAnswerState.filter(ans => ans === true).length; 
+    document.getElementById('trivia-score').textContent = `Skormu: ${correctCount}/${triviaData.length} 🎉`; 
+  }
 }
 function launchConfetti(){
   const cols=['#c84b72','#d4a042','#9b5de5','#00b894','#3d7aed','#f77f00','#e84040','#f0d080'];
