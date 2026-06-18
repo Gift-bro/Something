@@ -948,7 +948,7 @@ body{font-family:'Lato',sans-serif;background:var(--ink);min-height:100vh;overfl
       <span class="secret-lock">🔓</span>
       <div class="secret-photo-frame-land" id="secret-photo-frame"><div class="secret-ph">💑</div></div>
       <p class="secret-quote">"Selamat ulang tahun yang ke-23, sayanggg. Semoga semua hal yang sayanggg lakukan hari ini berjalan dengan mudah dan lancar ya, sayanggg.
-Hari ini adalah hari di mana sayanggg berulang tahun, dan aku ingin berterima kasih kepada sayanggg karena sudah menjadi bagian dari hidupku. Banyak hal sudah kita lalui bersama, dari hal-hal sederhana, baik itu senang maupun sedih.
+Hari ini adalah hari di mana sayanggg berulang tahun, dan aku ingin berterima kasih kepada sayanggg karena sudah menjadi bagian dari hidupku. Banyak hal sudah kita lalui bersama, dari hal-hal sederhana, baik itu senang maupun sedih.</p>
 <p class="secret-quote">Di usia yang baru ini, aku berharap dan berdoa agar sayanggg selalu diberikan kesehatan, kebahagiaan, kemudahan, kelancaran, perlindungan, dan kekuatan dalam menjalani kehidupan di setiap langkah sayanggg. Semoga segala hal yang sedang sayanggg perjuangkan dapat berjalan dengan baik, dan semoga cita-cita sayanggg perlahan demi perlahan dapat terwujud. Semoga juga setiap kesulitan yang datang dapat sayanggg lewati dengan mudah.</p>
 Aku juga berharap sayanggg bisa lebih menghargai diri sayanggg sendiri karena sebenarnya sayanggg adalah seseorang yang berharga. Jangan terlalu keras pada diri sayanggg sendiri saat ada hal yang tidak berjalan sesuai rencana. Tidak apa-apa kalau sayanggg ingin beristirahat terlebih dahulu jika merasa lelah, dan tidak apa-apa juga jika berjalan sedikit lebih pelan selama sayanggg tetap melangkah maju.</p>
 Terima kasih untuk semua perhatian, effort, waktu, cerita, dan kenangan yang sudah kita lewati bersama. Tidak ada yang tahu bagaimana peristiwa di masa depan nanti, tetapi aku bersyukur karena sampai saat ini aku masih bisa menjadi bagian dari perjalanan hidup sayanggg.
@@ -1096,17 +1096,17 @@ const CONFIG = {
     {
       pertanyaan : "Tempat pertama kita pergi jalan Bersama?",
       pilihan    : ["Transmart", "GOR", "CGV", "UNP"],
-      ans        : 1,   // ← La La Land (indeks ke-2)
+      ans        : [0],   // ← La La Land (indeks ke-2)
     },
     {
       pertanyaan : "Warna Favoritku?",
       pilihan    : ["Merah", "Biru", "Hijau", "Silver"],
-      ans        : 4,   // ← Ungu (indeks ke-3)
+      ans        : [3],   // ← Ungu (indeks ke-3)
     },
     {
       pertanyaan : "Hal yang paling kamu sukai?",
       pilihan    : ["Tidur", "Jajan", "Nonton", "Bersih-bersih"],
-      ans        : 1,2,3,   // ← Kafe (indeks ke-1)
+      ans        : [0,1,2],   // ← Kafe (indeks ke-1)
     },
   ],
 
@@ -1365,9 +1365,9 @@ function applyContent(){
 
   /* ── TRIVIA ── */
   triviaData = (C.tq && C.tq.length) ? C.tq : [
-    {q:'Film pertama yang kita tonton bersama?',opts:['Inception','Titanic','La La Land','The Notebook'],ans:2},
-    {q:'Warna favoritku?',opts:['Merah','Biru','Hijau','Ungu'],ans:3},
-    {q:'Di mana kita pertama kali bertemu?',opts:['Taman','Kafe','Sekolah','Mall'],ans:1},
+    {q:'Tempat pertama kita pergi jalan Bersama?',opts:['Transmart','GOR','CGV','UNP'],ans:0},
+    {q:'Warna favoritku?',opts:['Merah','Biru','Hijau','Silver'],ans:3},
+    {q:'Hal yang paling kamu sukai?',opts:['Tidur','Jajan','Nonton','Bersih-bersih'],ans:0,1,2},
   ];
 }
 
@@ -1521,34 +1521,46 @@ function updateMapGrid(){
 }
 
 /* TRIVIA BUILD */
-let triviaAnswered=[];
+let triviaAnswered = [];
+let triviaCorrect  = [];
+
+// Helper: normalisasi ans jadi array (mendukung format lama angka tunggal juga)
+function getAnsArray(td){
+  return Array.isArray(td.ans) ? td.ans : [td.ans];
+}
+
 function buildTrivia(){
-  triviaAnswered=triviaData.map(()=>false);
+  triviaAnswered = triviaData.map(()=>false);
+  triviaCorrect  = triviaData.map(()=>false);
   document.getElementById('trivia-score').textContent='';
   const container=document.getElementById('trivia-questions');
   container.innerHTML=triviaData.map((td,qi)=>`
     <div class="question-card" data-q="${qi}">
       <div class="q-head"><span class="q-brain">🧠</span>${esc(td.q)}</div>
       <div class="choices">
-        ${td.opts.map((o,bi)=>`<button class="choice-btn" onclick="answerQ(${qi},${bi},${bi===td.ans})">${esc(o)}</button>`).join('')}
+        ${td.opts.map((o,bi)=>`<button class="choice-btn" onclick="answerQ(${qi},${bi})">${esc(o)}</button>`).join('')}
       </div>
     </div>`).join('');
 }
-function answerQ(qi,bi,isCorrect){
-  const card=document.querySelector(`[data-q="${qi}"]`);
+
+function answerQ(qi, bi){
+  const td      = triviaData[qi];
+  const ansArr  = getAnsArray(td);
+  const isCorrect = ansArr.includes(bi);
+  const card = document.querySelector(`[data-q="${qi}"]`);
+
   card.querySelectorAll('.choice-btn').forEach((b,i)=>{
-    b.disabled=true;
-    if(i===triviaData[qi].ans)b.classList.add('correct');
-    else if(i===bi&&!isCorrect)b.classList.add('wrong');
+    b.disabled = true;
+    if(ansArr.includes(i)) b.classList.add('correct');   // tandai SEMUA jawaban benar
+    else if(i===bi) b.classList.add('wrong');             // tandai pilihan user jika salah
   });
-  triviaAnswered[qi]=true;
+
+  triviaAnswered[qi] = true;
+  triviaCorrect[qi]  = isCorrect;
+
   if(triviaAnswered.every(Boolean)){
-    const score=triviaData.filter((_,i)=>{
-      const card=document.querySelector(`[data-q="${i}"]`);
-      return card.querySelector('.choice-btn.correct:not(.wrong)');
-    });
-    const correct=document.querySelectorAll('.question-card .choice-btn.correct:not(.wrong)').length;
-    document.getElementById('trivia-score').textContent=`Skormu: ${correct}/${triviaData.length} 🎉`;
+    const score = triviaCorrect.filter(Boolean).length;
+    document.getElementById('trivia-score').textContent = `Skormu: ${score}/${triviaData.length} 🎉`;
   }
 }
 
